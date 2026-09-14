@@ -1579,4 +1579,4 @@
 
 "agent_sessions_hide_unreachable_title" = "Agochar os hosts inaccesibles";
 "agent_sessions_hide_unreachable_subtitle" = "Agocha os hosts cando falla a consulta das súas sesións.";
-"Limits not available. Auto does not use identity-free agy reports for a selected account. Switch Usage source to CLI to show those quotas." = "Limits not available. Auto does not use identity-free agy reports for a selected account. Switch Usage source to CLI to show those quotas.";
+"Limits not available. Auto does not use identity-free agy reports for a selected or injected account. Switch Usage source to CLI to show those quotas." = "Limits not available. Auto does not use identity-free agy reports for a selected or injected account. Switch Usage source to CLI to show those quotas.";

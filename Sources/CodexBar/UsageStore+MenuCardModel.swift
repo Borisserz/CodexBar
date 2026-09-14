@@ -157,6 +157,8 @@ extension UsageStore {
             provider: provider,
             usageSource: self.settings.antigravityUsageDataSource,
             hasSelectedTokenAccount: self.settings.selectedTokenAccount(for: .antigravity) != nil,
+            hasInjectedOAuthCredentials: AntigravityAutoGuidance.hasInjectedOAuthCredentials(
+                in: self.environmentBase),
             rateLimitsUnavailable: snapshot?.rateLimitsUnavailable(for: .antigravity) == true)
     }
 

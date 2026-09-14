@@ -328,8 +328,9 @@ struct ProviderSettingsDescriptorTests {
 
         #expect(usagePicker.options.map(\.title) == ["Auto", "Google OAuth", "Local API / agy CLI"])
         #expect(usagePicker.subtitle ==
-            "Auto tries the app, agy, then IDE. A selected account skips identity-free agy reports; " +
-            "switch Usage source to CLI to show those quotas. OAuth follows for selected or signed-in accounts.")
+            "Auto tries the app, agy, then IDE. A selected or injected account skips identity-free " +
+            "agy reports; switch Usage source to CLI to show those quotas. " +
+            "OAuth follows for selected or signed-in accounts.")
     }
 
     @Test

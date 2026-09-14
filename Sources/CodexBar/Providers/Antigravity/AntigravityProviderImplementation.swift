@@ -54,8 +54,8 @@ struct AntigravityProviderImplementation: ProviderImplementation {
             ProviderSettingsPickerDescriptor(
                 id: "antigravity-usage-source",
                 title: "Usage source",
-                subtitle: "Auto tries the app, agy, then IDE. A selected account skips identity-free agy reports; " +
-                    "switch Usage source to CLI to show those quotas. " +
+                subtitle: "Auto tries the app, agy, then IDE. A selected or injected account skips identity-free " +
+                    "agy reports; switch Usage source to CLI to show those quotas. " +
                     "OAuth follows for selected or signed-in accounts.",
                 binding: usageBinding,
                 options: usageOptions,

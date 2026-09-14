@@ -361,7 +361,7 @@ struct MenuDescriptor {
                 preferredCurrencyCode: settings.preferredCurrencyCode)
             if snap.rateLimitsUnavailable(for: provider) {
                 entries.append(.text(
-                    self.antigravityLimitsUnavailableText(provider: provider, settings: settings),
+                    self.antigravityLimitsUnavailableText(provider: provider, store: store, settings: settings),
                     .secondary))
             }
         } else if !store.isStale(provider: provider),
@@ -386,12 +386,15 @@ struct MenuDescriptor {
 
     private static func antigravityLimitsUnavailableText(
         provider: UsageProvider,
+        store: UsageStore,
         settings: SettingsStore) -> String
     {
         if AntigravityAutoGuidance.shouldExplainSelectedAccountSkip(
             provider: provider,
             usageSource: settings.antigravityUsageDataSource,
             hasSelectedTokenAccount: settings.selectedTokenAccount(for: .antigravity) != nil,
+            hasInjectedOAuthCredentials: AntigravityAutoGuidance.hasInjectedOAuthCredentials(
+                in: store.environmentBase),
             rateLimitsUnavailable: true)
         {
             return L(AntigravityAutoGuidance.selectedAccountLimitsUnavailable)
