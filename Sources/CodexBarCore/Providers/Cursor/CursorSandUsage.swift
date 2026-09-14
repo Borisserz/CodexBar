@@ -29,9 +29,16 @@ public struct CursorSandUsageStatus: Decodable, Sendable, Equatable {
         self.hasNonZeroIncludedLimit = hasNonZeroIncludedLimit
     }
 
-    /// Weekly Grok Bot bar, or `nil` when the account has no included Bot allowance.
+    /// Weekly Grok Bot bar, or `nil` when the account has neither an included allowance nor active trial usage.
     public func extraRateWindow(resetDescription: (Date) -> String) -> NamedRateWindow? {
-        guard self.hasNonZeroIncludedLimit == true, let usagePercent = self.usagePercent else {
+        guard let usagePercent = self.usagePercent else {
+            return nil
+        }
+        // Trial accounts report a live percentage with `hasNonZeroIncludedLimit == false`.
+        // Drop the window only when both the included-limit flag and available-usage flag are off.
+        let hasIncludedAllowance = self.hasNonZeroIncludedLimit == true
+        let hasActiveUsage = self.hasAvailableUsage == true
+        guard hasIncludedAllowance || hasActiveUsage else {
             return nil
         }
         let start = ISO8601DateParser.parse(self.currentPeriodStart)

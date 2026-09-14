@@ -41,6 +41,20 @@ struct CursorSandUsageTests {
     }
 
     @Test
+    func `shows grok bot trial usage when the included limit flag is false`() {
+        let status = CursorSandUsageStatus(
+            currentPeriodStart: "2026-08-17T07:57:50.647Z",
+            nextResetTimestampUtc: "2026-08-24T07:57:50.647Z",
+            usagePercent: 13.55,
+            hasAvailableUsage: true,
+            hasNonZeroIncludedLimit: false)
+        let window = status.extraRateWindow(resetDescription: { _ in "Resets" })
+        #expect(window?.id == CursorSandUsageStatus.extraWindowID)
+        #expect(window?.title == "Grok Bot")
+        #expect(window?.window.usedPercent == 13.55)
+    }
+
+    @Test
     func `maps sand usage onto a grok bot extra window`() {
         let snapshot = CursorStatusSnapshot(
             planPercentUsed: 0.6,
