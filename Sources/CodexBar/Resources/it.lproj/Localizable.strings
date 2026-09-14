@@ -1583,3 +1583,4 @@
 
 "agent_sessions_hide_unreachable_title" = "Nascondi gli host irraggiungibili";
 "agent_sessions_hide_unreachable_subtitle" = "Nascondi gli host quando il recupero delle loro sessioni non riesce.";
+"Limits not available. Auto does not use identity-free agy reports for a selected account. Switch Usage source to CLI to show those quotas." = "Limits not available. Auto does not use identity-free agy reports for a selected account. Switch Usage source to CLI to show those quotas.";

@@ -127,6 +127,10 @@ extension UsageStore {
             subtitleOverride: account?.subtitle,
             // Provider-specific by design: Kilo's menu explains its automatic source fallback.
             kiloAutoMode: !isSettings && provider == .kilo && self.settings.kiloUsageDataSource == .auto,
+            antigravityAutoSkipsIdentityFreeReport: self.shouldExplainAntigravityIdentityFreeSkip(
+                provider: provider,
+                snapshot: snapshot,
+                isSettings: isSettings),
             hidePersonalInfo: self.settings.hidePersonalInfo,
             weeklyPace: weeklyPace,
             sessionEquivalentForecast: forecast,
@@ -141,6 +145,19 @@ extension UsageStore {
             preferredCurrencyCode: isSettings ? "auto" : self.settings.preferredCurrencyCode,
             costUsageBucketCalendar: self.settings.costUsageBucketCalendar,
             now: now)
+    }
+
+    private func shouldExplainAntigravityIdentityFreeSkip(
+        provider: UsageProvider,
+        snapshot: UsageSnapshot?,
+        isSettings: Bool) -> Bool
+    {
+        guard !isSettings else { return false }
+        return AntigravityAutoGuidance.shouldExplainSelectedAccountSkip(
+            provider: provider,
+            usageSource: self.settings.antigravityUsageDataSource,
+            hasSelectedTokenAccount: self.settings.selectedTokenAccount(for: .antigravity) != nil,
+            rateLimitsUnavailable: snapshot?.rateLimitsUnavailable(for: .antigravity) == true)
     }
 
     private func menuCardSessionEquivalentForecast(

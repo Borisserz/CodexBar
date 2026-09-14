@@ -65,7 +65,9 @@ when CodexBar has a selected/injected Google account or an existing shared crede
 `fetchAvailableModels` payload is only accepted after `retrieveUserQuota` echoes bucket fractions; this can be an
 availability-style fallback rather than the full Antigravity quota summary.
 When OAuth identifies the account but quota endpoints deny access, CodexBar shows `Limits not available` instead of an
-empty quota card.
+empty quota card. Auto also skips an identity-free `agy` usage report when a Google account is selected or injected:
+that report has no account to match, so CodexBar keeps the selected account and falls through to OAuth. Switch Usage
+source to CLI (`codexbar usage --provider antigravity --source cli`) to show those quotas anyway.
 
 ## OAuth account switching
 
@@ -76,7 +78,8 @@ empty quota card.
 - When a token account is selected, the OAuth fetcher uses that account before falling back to the shared credentials file.
   In `auto` mode the ambient Antigravity app, `agy` CLI, and IDE probes still run first, but a snapshot whose account
   does not match the selected account is rejected so the pipeline falls through to the account-scoped OAuth fetch (see
-  `AntigravitySelectedAccountGuard`). If no account is selected/injected, `auto` includes OAuth only when the legacy
+  `AntigravitySelectedAccountGuard`). Identity-free `agy` print reports are skipped for the same reason; explicit CLI
+  source still accepts them. If no account is selected/injected, `auto` includes OAuth only when the legacy
   shared credentials file already exists. Explicit `cli`/`oauth` source modes stay authoritative and are not re-checked.
 - Removing the last saved token account that matches `~/.codexbar/antigravity/oauth_creds.json` deletes that shared file,
   so a removed CodexBar account does not silently continue refreshing through the legacy shared cache.

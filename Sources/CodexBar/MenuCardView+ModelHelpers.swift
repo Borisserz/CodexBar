@@ -635,6 +635,9 @@ extension UsageMenuCardView.Model {
 
     static func placeholder(input: Input) -> String? {
         if self.shouldShowRateLimitsUnavailablePlaceholder(input: input) {
+            if input.antigravityAutoSkipsIdentityFreeReport {
+                return L(AntigravityAutoGuidance.selectedAccountLimitsUnavailable)
+            }
             return L("Limits not available")
         }
 

@@ -360,7 +360,9 @@ struct MenuDescriptor {
                 showOptionalUsage: settings.showOptionalCreditsAndExtraUsage,
                 preferredCurrencyCode: settings.preferredCurrencyCode)
             if snap.rateLimitsUnavailable(for: provider) {
-                entries.append(.text(L("Limits not available"), .secondary))
+                entries.append(.text(
+                    self.antigravityLimitsUnavailableText(provider: provider, settings: settings),
+                    .secondary))
             }
         } else if !store.isStale(provider: provider),
                   store.knownLimitsAvailability(for: provider)?.isUnavailable == true
@@ -380,6 +382,21 @@ struct MenuDescriptor {
             .appendUsageMenuEntries(context: usageContext, entries: &entries)
 
         return Section(entries: entries)
+    }
+
+    private static func antigravityLimitsUnavailableText(
+        provider: UsageProvider,
+        settings: SettingsStore) -> String
+    {
+        if AntigravityAutoGuidance.shouldExplainSelectedAccountSkip(
+            provider: provider,
+            usageSource: settings.antigravityUsageDataSource,
+            hasSelectedTokenAccount: settings.selectedTokenAccount(for: .antigravity) != nil,
+            rateLimitsUnavailable: true)
+        {
+            return L(AntigravityAutoGuidance.selectedAccountLimitsUnavailable)
+        }
+        return L("Limits not available")
     }
 
     private static func appendProviderUsageSummaries(

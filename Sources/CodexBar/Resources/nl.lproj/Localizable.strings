@@ -1579,3 +1579,4 @@
 
 "agent_sessions_hide_unreachable_title" = "Onbereikbare hosts verbergen";
 "agent_sessions_hide_unreachable_subtitle" = "Verberg hosts wanneer het ophalen van hun sessies mislukt.";
+"Limits not available. Auto does not use identity-free agy reports for a selected account. Switch Usage source to CLI to show those quotas." = "Limits not available. Auto does not use identity-free agy reports for a selected account. Switch Usage source to CLI to show those quotas.";

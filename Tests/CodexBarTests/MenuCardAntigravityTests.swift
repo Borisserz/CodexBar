@@ -45,6 +45,44 @@ struct MenuCardAntigravityTests {
     }
 
     @Test
+    @MainActor
+    func `antigravity auto selected account explains identity free agy skip`() throws {
+        let suite = "MenuCardAntigravityTests-identity-free-skip"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defaults.removePersistentDomain(forName: suite)
+        let settings = SettingsStore(
+            userDefaults: defaults,
+            configStore: testConfigStore(suiteName: suite),
+            zaiTokenStore: NoopZaiTokenStore(),
+            syntheticTokenStore: NoopSyntheticTokenStore())
+        settings.statusChecksEnabled = false
+        settings.antigravityUsageDataSource = .auto
+        settings.addTokenAccount(provider: .antigravity, label: "Work", token: "token")
+
+        let store = UsageStore(
+            fetcher: UsageFetcher(environment: [:]),
+            browserDetection: BrowserDetection(cacheTTL: 0),
+            settings: settings)
+        store._setSnapshotForTesting(
+            UsageSnapshot(
+                primary: nil,
+                secondary: nil,
+                updatedAt: Date(timeIntervalSince1970: 1_742_771_200),
+                identity: ProviderIdentitySnapshot(
+                    providerID: .antigravity,
+                    accountEmail: "user@example.com",
+                    accountOrganization: nil,
+                    loginMethod: "Paid")),
+            provider: .antigravity)
+
+        let model = store.menuCardModel(for: .antigravity, now: Date(timeIntervalSince1970: 1_742_771_200))
+
+        #expect(model.placeholder ==
+            "Limits not available. Auto does not use identity-free agy reports for a selected account. " +
+            "Switch Usage source to CLI to show those quotas.")
+    }
+
+    @Test
     func `antigravity metrics omit missing groups`() throws {
         let now = Date()
         let identity = ProviderIdentitySnapshot(

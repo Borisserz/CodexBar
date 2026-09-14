@@ -1582,3 +1582,4 @@
 
 "agent_sessions_hide_unreachable_title" = "Erişilemeyen ana bilgisayarları gizle";
 "agent_sessions_hide_unreachable_subtitle" = "Oturumları alınamadığında ana bilgisayarları gizle.";
+"Limits not available. Auto does not use identity-free agy reports for a selected account. Switch Usage source to CLI to show those quotas." = "Limits not available. Auto does not use identity-free agy reports for a selected account. Switch Usage source to CLI to show those quotas.";
