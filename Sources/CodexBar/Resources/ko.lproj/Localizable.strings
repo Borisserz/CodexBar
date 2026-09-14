@@ -1549,4 +1549,3 @@
 
 "agent_sessions_hide_unreachable_title" = "연결할 수 없는 호스트 숨기기";
 "agent_sessions_hide_unreachable_subtitle" = "세션을 가져오지 못한 호스트를 숨깁니다.";
-"Limits not available. Auto does not use identity-free agy reports for a selected or injected account. Switch Usage source to CLI to show those quotas." = "Limits not available. Auto does not use identity-free agy reports for a selected or injected account. Switch Usage source to CLI to show those quotas.";

@@ -2,6 +2,9 @@
 
 ## 0.60.3 — Unreleased
 
+### Fixed
+- Antigravity: explain why Auto skips agy reports without account identity for selected Google accounts and identify the local source alternative without changing account isolation (#3650, fixes #3649). Thanks @Borisserz!
+
 ## 0.60.2 — 2026-09-14
 
 ### Highlights

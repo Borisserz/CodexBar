@@ -1581,4 +1581,3 @@
 
 "agent_sessions_hide_unreachable_title" = "Скрывать недоступные узлы";
 "agent_sessions_hide_unreachable_subtitle" = "Скрывать узлы, если не удалось получить их сеансы.";
-"Limits not available. Auto does not use identity-free agy reports for a selected or injected account. Switch Usage source to CLI to show those quotas." = "Limits not available. Auto does not use identity-free agy reports for a selected or injected account. Switch Usage source to CLI to show those quotas.";

@@ -1582,4 +1582,3 @@
 "Color Pace Indicator" = "Color Pace Indicator";
 "Green pace indicator when behind pace, red when ahead of pace (risk of running out early)" = "Green pace indicator when behind pace, red when ahead of pace (risk of running out early)";
 "%@ weekly" = "%@ weekly";
-"Limits not available. Auto does not use identity-free agy reports for a selected or injected account. Switch Usage source to CLI to show those quotas." = "Limits not available. Auto does not use identity-free agy reports for a selected or injected account. Switch Usage source to CLI to show those quotas.";

@@ -1611,4 +1611,3 @@
 
 "agent_sessions_hide_unreachable_title" = "隱藏無法連線的主機";
 "agent_sessions_hide_unreachable_subtitle" = "擷取工作階段失敗時隱藏該主機。";
-"Limits not available. Auto does not use identity-free agy reports for a selected or injected account. Switch Usage source to CLI to show those quotas." = "Limits not available. Auto does not use identity-free agy reports for a selected or injected account. Switch Usage source to CLI to show those quotas.";

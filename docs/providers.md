@@ -218,8 +218,7 @@ complete when the available scan window covers fewer days.
 
 ## Antigravity
 - Local Antigravity language server (internal protocol, HTTPS on localhost).
-- `agy` CLI HTTPS source when the app is closed; Google OAuth fallback. Auto skips identity-free `agy` reports for a
-  selected or injected account; switch Usage source to CLI to show those quotas.
+- `agy` CLI HTTPS source when the app is closed; Google OAuth fallback.
 - `RetrieveUserQuotaSummary` primary; `GetUserStatus` / `GetCommandModelConfigs` fallbacks.
 - Status: Google Workspace incidents (Gemini product).
 - Details: `docs/antigravity.md`.

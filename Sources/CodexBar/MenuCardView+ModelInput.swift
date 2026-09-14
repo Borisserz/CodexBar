@@ -38,8 +38,6 @@ extension UsageMenuCardView.Model {
         let sourceLabel: String?
         let subtitleOverride: String?
         let kiloAutoMode: Bool
-        /// Auto kept a selected Antigravity account, so an identity-free agy report was not used.
-        let antigravityAutoSkipsIdentityFreeReport: Bool
         let hidePersonalInfo: Bool
         let weeklyPace: UsagePace?
         let sessionEquivalentForecast: SessionEquivalentForecast?
@@ -86,7 +84,6 @@ extension UsageMenuCardView.Model {
             sourceLabel: String? = nil,
             subtitleOverride: String? = nil,
             kiloAutoMode: Bool = false,
-            antigravityAutoSkipsIdentityFreeReport: Bool = false,
             hidePersonalInfo: Bool,
             weeklyPace: UsagePace? = nil,
             sessionEquivalentForecast: SessionEquivalentForecast? = nil,
@@ -132,7 +129,6 @@ extension UsageMenuCardView.Model {
             self.sourceLabel = sourceLabel
             self.subtitleOverride = subtitleOverride
             self.kiloAutoMode = kiloAutoMode
-            self.antigravityAutoSkipsIdentityFreeReport = antigravityAutoSkipsIdentityFreeReport
             self.hidePersonalInfo = hidePersonalInfo
             self.weeklyPace = weeklyPace
             self.sessionEquivalentForecast = sessionEquivalentForecast
