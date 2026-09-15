@@ -256,6 +256,30 @@ struct StatusItemControllerSplitLifecycleTests {
     }
 
     @Test
+    func `makeStatusItem assigns autosaveName before onCreated observes the item`() throws {
+        // Tahoe can bind Control Center to the transient Item-N identity when setup runs before
+        // the stable autosave name is applied (#3377). Callbacks must already see the final name.
+        let suite = "StatusItemControllerSplitLifecycleTests-autosave-order-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defaults.removePersistentDomain(forName: suite)
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        var autosaveNameDuringOnCreated: String?
+        let item = StatusItemController.makeStatusItem(
+            statusBar: .system,
+            identity: .merged,
+            defaults: defaults,
+            legacyDefaultItemIndex: 0,
+            onCreated: { created in
+                autosaveNameDuringOnCreated = created.autosaveName
+            })
+        defer { NSStatusBar.system.removeStatusItem(item) }
+
+        #expect(autosaveNameDuringOnCreated == "codexbar-merged")
+        #expect(item.autosaveName == "codexbar-merged")
+    }
+
+    @Test
     func `status item placement preflight leaves fresh install placement unset`() throws {
         let suite = "StatusItemControllerSplitLifecycleTests-placement-missing-\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
