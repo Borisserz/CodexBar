@@ -329,8 +329,8 @@ final class StatusItemController: NSObject, NSMenuDelegate, StatusItemControllin
             autosaveName: identity.autosaveName,
             legacyDefaultItemIndex: legacyDefaultItemIndex)
         let item = statusBar.statusItem(withLength: NSStatusItem.variableLength)
-        // Assign before onCreated/setup: Tahoe can otherwise bind Control Center to the transient
-        // Item-N identity and never host the stable autosave name (#3377).
+        // Assign before onCreated/setup: provider vending registers through that callback (#2162), and
+        // a late autosaveName leaves AppKit on the transient Item-N identity during setup.
         item.autosaveName = identity.autosaveName
         onCreated?(item)
         if let button = item.button {

@@ -134,7 +134,7 @@ untouched. The bound is at least the widest connected display's width in points 
 coordinate bound, plus the existing safety padding. This avoids newly deleting menu-manager parking positions while
 covering wide displays left of the primary screen. When no display bound is available, finite positive positions are preserved.
 The stable autosave name is assigned immediately after `statusItem(withLength:)` and before any `onCreated` setup, so
-Tahoe never observes the transient `Item-N` identity during callback work. Isolated placement tests
+provider-item registration never observes the transient `Item-N` identity during callback work. Isolated placement tests
 cover this cleanup without creating status items or changing the user's saved preferences. Passing these tests does
 not establish the cause of a position that changes again after launch; that requires runtime placement evidence.
 
