@@ -281,6 +281,29 @@ struct StatusItemControllerSplitLifecycleTests {
     }
 
     @Test
+    func `provider vending registers with stable autosaveName before setup callback`() throws {
+        // Exercise StatusItemController.vendStatusItem (the app entrypoint), not only makeStatusItem.
+        let (_, controller) = try self.makeSplitController()
+        defer { controller.releaseStatusItemsForTesting() }
+
+        let initialItem = try #require(controller.statusItems[.codex])
+        controller.statusItems.removeValue(forKey: .codex)
+        controller.statusBar.removeStatusItem(initialItem)
+
+        var autosaveNameAtRegistration: String?
+        var registeredItem: NSStatusItem?
+        let vendedItem = controller._test_vendStatusItem(for: .codex) { created in
+            autosaveNameAtRegistration = created.autosaveName
+            registeredItem = controller.statusItems[.codex]
+        }
+
+        #expect(autosaveNameAtRegistration == "codexbar-codex")
+        #expect(registeredItem === vendedItem)
+        #expect(vendedItem.autosaveName == "codexbar-codex")
+        #expect(vendedItem.button != nil)
+    }
+
+    @Test
     func `status item placement preflight leaves fresh install placement unset`() throws {
         let suite = "StatusItemControllerSplitLifecycleTests-placement-missing-\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
