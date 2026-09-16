@@ -1,0 +1,4 @@
+copied=Updates managed by Homebrew. Run: brew upgrade --cask steipete/tap/codexbar
+brewCommand=brew upgrade --cask steipete/tap/codexbar
+selectedVia=NSTextField.fieldEditor.copy
+pasteboardChangeCountDelta=1

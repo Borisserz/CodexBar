@@ -7,6 +7,12 @@ import Testing
 struct AboutUpdatesUnavailableNativeProofTests {
     @Test
     func `hosted about unavailable brew line is selectable and copies exactly`() throws {
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["CODEXBAR_ABOUT_BREW_NATIVE_PROOF"] == "1" else {
+            // Opt-in: avoids clearing a developer's general pasteboard in ordinary suite runs.
+            return
+        }
+
         _ = NSApplication.shared
         let brewReason = "Updates managed by Homebrew. Run: brew upgrade --cask steipete/tap/codexbar"
         let brewCommand = "brew upgrade --cask steipete/tap/codexbar"
@@ -31,29 +37,45 @@ struct AboutUpdatesUnavailableNativeProofTests {
 
         let root = try #require(window.contentView)
         let allViews = Self.allDescendants(of: root)
-        let classSummary = Dictionary(grouping: allViews, by: { String(describing: type(of: $0)) })
-            .map { "\($0.key):\($0.value.count)" }
-            .sorted()
-            .joined(separator: ", ")
-        let textViews = allViews.compactMap { $0 as? NSTextView }
         let textFields = allViews.compactMap { $0 as? NSTextField }
-        let matchingTextViews = textViews.filter { $0.string.contains(brewCommand) }
         let matchingFields = textFields.filter { $0.stringValue.contains(brewCommand) }
+        let textViews = allViews.compactMap { $0 as? NSTextView }
+        let matchingTextViews = textViews.filter { $0.string.contains(brewCommand) }
 
         #expect(
             !matchingTextViews.isEmpty || !matchingFields.isEmpty,
-            """
-            Missing brew instruction view. classes=\(classSummary); \
-            textViewStrings=\(textViews.map(\.string)); fields=\(textFields.map(\.stringValue))
-            """)
+            "Missing brew instruction view in hosted About pane")
 
         let pasteboard = NSPasteboard.general
-        let previousChangeCount = pasteboard.changeCount
+        let savedItems = pasteboard.pasteboardItems?.compactMap { item -> [NSPasteboard.PasteboardType: Data]? in
+            var payload: [NSPasteboard.PasteboardType: Data] = [:]
+            for type in item.types {
+                if let data = item.data(forType: type) {
+                    payload[type] = data
+                }
+            }
+            return payload.isEmpty ? nil : payload
+        } ?? []
+        defer {
+            pasteboard.clearContents()
+            if !savedItems.isEmpty {
+                pasteboard.writeObjects(savedItems.map { payload in
+                    let item = NSPasteboardItem()
+                    for (type, data) in payload {
+                        item.setData(data, forType: type)
+                    }
+                    return item
+                })
+            }
+        }
+
         pasteboard.clearContents()
+        let changeCountBeforeCopy = pasteboard.changeCount
 
         if let textView = matchingTextViews.first {
             #expect(textView.isSelectable)
             #expect(!textView.isEditable)
+            window.makeFirstResponder(textView)
             textView.selectAll(nil)
             #expect(textView.selectedRange().length == textView.string.utf16.count)
             textView.copy(nil)
@@ -62,21 +84,22 @@ struct AboutUpdatesUnavailableNativeProofTests {
             #expect(field.isSelectable)
             window.makeFirstResponder(field)
             field.selectText(nil)
-            if let editor = field.currentEditor() as? NSTextView {
-                editor.selectAll(nil)
-                editor.copy(nil)
-            } else {
-                pasteboard.setString(field.stringValue, forType: .string)
-            }
+            let editor = try #require(
+                field.currentEditor() as? NSTextView,
+                "NSTextField must expose a field editor so copy is a real native selection operation")
+            #expect(editor.isSelectable)
+            editor.selectAll(nil)
+            #expect(editor.selectedRange().length == editor.string.utf16.count)
+            editor.copy(nil)
         }
 
         RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.1))
-        let copied = pasteboard.string(forType: .string) ?? ""
+        #expect(pasteboard.changeCount > changeCountBeforeCopy)
+        let copied = try #require(pasteboard.string(forType: .string))
+        #expect(copied == brewReason)
         #expect(copied.contains(brewCommand))
-        #expect(copied == brewReason || copied == brewCommand)
-        #expect(pasteboard.changeCount > previousChangeCount || !copied.isEmpty)
 
-        if let proofPath = ProcessInfo.processInfo.environment["CODEXBAR_ABOUT_BREW_PROOF_PATH"] {
+        if let proofPath = environment["CODEXBAR_ABOUT_BREW_PROOF_PATH"] {
             let proofURL = URL(fileURLWithPath: proofPath)
             try FileManager.default.createDirectory(
                 at: proofURL.deletingLastPathComponent(),
@@ -85,28 +108,22 @@ struct AboutUpdatesUnavailableNativeProofTests {
             try """
             copied=\(copied)
             brewCommand=\(brewCommand)
-            selectedVia=\(matchingTextViews.isEmpty ? "NSTextField" : "NSTextView")
+            selectedVia=\(matchingTextViews.isEmpty ? "NSTextField.fieldEditor.copy" : "NSTextView.copy")
+            pasteboardChangeCountDelta=\(pasteboard.changeCount - changeCountBeforeCopy)
             """.write(to: notePath, atomically: true, encoding: .utf8)
 
-            // Prefer a view bitmap so CI/headless hosts still produce proof imagery.
-            if let view = window.contentView {
-                let bounds = view.bounds
-                guard let rep = view.bitmapImageRepForCachingDisplay(in: bounds) else {
-                    Issue.record("Could not allocate bitmap for About proof window")
-                    return
-                }
-                view.cacheDisplay(in: bounds, to: rep)
-                let image = NSImage(size: bounds.size)
+            if let view = window.contentView,
+               let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds)
+            {
+                view.cacheDisplay(in: view.bounds, to: rep)
+                let image = NSImage(size: view.bounds.size)
                 image.addRepresentation(rep)
-                guard let tiff = image.tiffRepresentation,
-                      let bitmap = NSBitmapImageRep(data: tiff),
-                      let png = bitmap.representation(using: .png, properties: [:])
-                else {
-                    Issue.record("Could not encode About proof PNG")
-                    return
+                if let tiff = image.tiffRepresentation,
+                   let bitmap = NSBitmapImageRep(data: tiff),
+                   let png = bitmap.representation(using: .png, properties: [:])
+                {
+                    try png.write(to: proofURL)
                 }
-                try png.write(to: proofURL)
-                #expect(FileManager.default.fileExists(atPath: proofPath))
             }
         }
     }
