@@ -7,7 +7,9 @@ enum AboutUpdatesUnavailableContent {
     }
 
     /// Homebrew / unsigned builds show a shell command users need to copy.
-    static var allowsTextSelection: Bool { true }
+    static var allowsTextSelection: Bool {
+        true
+    }
 }
 
 @MainActor
