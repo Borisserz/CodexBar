@@ -27,4 +27,5 @@ read_when:
 - If you change the feed host or key, update Info.plist (`SUFeedURL`, `SUPublicEDKey`) and bump the app.
 - Auto-check toggle is persisted via Sparkle; manual “Check for Updates…” remains in About.
 - CodexBar disables Sparkle in Homebrew and unsigned builds; those installs should be updated via `brew` or reinstalling from Releases.
+- About shows the Homebrew / unsigned update instruction with native text selection so the `brew upgrade` command can be copied.
 - Homebrew detection follows the Caskroom artifact symlink to the installed app, including apps moved into `/Applications`; separate app copies remain eligible for Sparkle.

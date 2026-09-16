@@ -2,6 +2,9 @@
 
 ## 0.60.5 — Unreleased
 
+### Fixed
+- About: allow selecting and copying the Homebrew update command when Sparkle is unavailable (#3682).
+
 ## 0.60.4 — 2026-09-16
 
 ### Highlights

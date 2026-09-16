@@ -1,6 +1,15 @@
 import AppKit
 import SwiftUI
 
+enum AboutUpdatesUnavailableContent {
+    static func message(unavailableReason: String?) -> String {
+        unavailableReason ?? L("updates_unavailable")
+    }
+
+    /// Homebrew / unsigned builds show a shell command users need to copy.
+    static var allowsTextSelection: Bool { true }
+}
+
 @MainActor
 struct AboutPane: View {
     let updater: UpdaterProviding
@@ -57,8 +66,9 @@ struct AboutPane: View {
                 }
             } else {
                 Section {
-                    Text(self.updater.unavailableReason ?? L("updates_unavailable"))
+                    Text(AboutUpdatesUnavailableContent.message(unavailableReason: self.updater.unavailableReason))
                         .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
                 }
             }
 
