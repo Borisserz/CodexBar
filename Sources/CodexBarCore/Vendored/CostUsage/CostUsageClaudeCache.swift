@@ -67,7 +67,7 @@ final class CostUsageClaudeReportMemo: @unchecked Sendable {
     static let shared = CostUsageClaudeReportMemo()
     static let persistedVersion = 1
     /// Bump when bundled pricing, model aliases, or daily-report aggregation changes without new artifact stamps.
-    static let reportSemanticsVersion = 1
+    static let reportSemanticsVersion = 5
 
     private struct StoredEntry {
         let entry: Entry
@@ -80,6 +80,8 @@ final class CostUsageClaudeReportMemo: @unchecked Sendable {
         var sourceInventory: [String: CostUsageClaudeFileStamp]
         var reportKey: CostUsageClaudeReportMemoKey
         var report: CostUsageDailyReport
+        var hourly: [CostUsageCodexPreviousReport.HourlyEntry]?
+        var quotaSlices: [CostUsageCodexPreviousReport.QuotaSlice]?
     }
 
     private let lock = NSLock()
@@ -162,12 +164,22 @@ final class CostUsageClaudeReportMemo: @unchecked Sendable {
         guard let data = try? Data(contentsOf: url),
               let envelope = try? JSONDecoder().decode(PersistedEnvelope.self, from: data),
               envelope.version == Self.persistedVersion,
-              envelope.reportSemanticsVersion == Self.reportSemanticsVersion
+              envelope.reportSemanticsVersion == Self.reportSemanticsVersion,
+              Self.hasValidIncompleteCounts(envelope.report)
         else { return nil }
         return Entry(
             sourceInventory: envelope.sourceInventory,
             reportKey: envelope.reportKey,
-            report: envelope.report)
+            report: CostUsageDailyReport(
+                data: envelope.report.data,
+                summary: envelope.report.summary,
+                hourly: (envelope.hourly ?? []).map(\.hourlyValue),
+                quotaSlices: (envelope.quotaSlices ?? []).map(\.timedValue)))
+    }
+
+    private static func hasValidIncompleteCounts(_ report: CostUsageDailyReport) -> Bool {
+        let counts = report.data.flatMap { $0.modelBreakdowns ?? [] }.compactMap(\.incompleteRequestCount)
+        return counts.allSatisfy { $0 >= 0 } && CheckedSum.integers(counts) != nil
     }
 
     private static func persist(_ entry: Entry, canonicalCachePath: String) {
@@ -177,7 +189,9 @@ final class CostUsageClaudeReportMemo: @unchecked Sendable {
             reportSemanticsVersion: Self.reportSemanticsVersion,
             sourceInventory: entry.sourceInventory,
             reportKey: entry.reportKey,
-            report: entry.report)
+            report: entry.report,
+            hourly: entry.report.hourly.map(CostUsageCodexPreviousReport.HourlyEntry.init),
+            quotaSlices: entry.report.quotaSlices.map(CostUsageCodexPreviousReport.QuotaSlice.init))
         guard let data = try? JSONEncoder().encode(envelope) else { return }
         let directory = url.deletingLastPathComponent()
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -308,6 +322,9 @@ struct CostUsageClaudeCache: Codable {
 /// Claude and Vertex retain their small transcript cache. Codex deliberately has no route
 /// through this JSON I/O boundary; its only persistence authority is `CostUsageStore`.
 enum CostUsageClaudeCacheIO {
+    /// Reparse records written before proxy completion metadata was retained.
+    private static let schemaVersion = 3
+
     private static func defaultCacheRoot() -> URL {
         let root = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
         return root.appendingPathComponent("CodexBar", isDirectory: true)
@@ -335,7 +352,7 @@ enum CostUsageClaudeCacheIO {
         CostUsageScanner.recordClaudeScanWork(.cacheDecode)
         #endif
         guard let cache = try? JSONDecoder().decode(CostUsageClaudeCache.self, from: data),
-              cache.usage.version == 1
+              cache.usage.version == self.schemaVersion
         else { return CostUsageClaudeCache() }
         if let calendar, cache.usage.timeZoneIdentifier != calendar.timeZone.identifier {
             return CostUsageClaudeCache()
@@ -352,6 +369,7 @@ enum CostUsageClaudeCacheIO {
     {
         let url = self.cacheFileURL(provider: provider, cacheRoot: cacheRoot)
         var cache = cache
+        cache.usage.version = self.schemaVersion
         cache.usage.timeZoneIdentifier = calendar.timeZone.identifier
         #if DEBUG
         CostUsageScanner.recordClaudeScanWork(.cacheEncode)

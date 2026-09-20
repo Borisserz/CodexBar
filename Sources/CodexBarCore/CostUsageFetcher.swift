@@ -428,10 +428,11 @@ public struct CostUsageFetcher: Sendable {
         }
 
         // Provider-specific by design: Cursor and Antigravity local readers backfill providers without remote history.
-        let fallbackCalendar = Self.resolvedScannerOptions(
+        let fallbackOptions = Self.resolvedScannerOptions(
             overrideScannerOptions,
             provider: provider,
-            codexHomePath: codexHomePath).calendar
+            codexHomePath: codexHomePath)
+        let fallbackCalendar = fallbackOptions.calendar
         if provider == .cursor {
             if let local = await self.loadCursorLocalSnapshot(
                 now: now, historyDays: clampedHistoryDays, calendar: fallbackCalendar)
@@ -441,12 +442,10 @@ public struct CostUsageFetcher: Sendable {
             if let remoteError {
                 throw remoteError
             }
-            return Self.tokenSnapshot(
-                from: CostUsageDailyReport(data: [], summary: nil),
+            return Self.unavailableLocalSnapshot(
                 now: now,
                 historyDays: clampedHistoryDays,
-                calendar: fallbackCalendar,
-                historyCoverageIsEstablished: false)
+                calendar: fallbackCalendar)
         }
         // Provider-specific by design: Antigravity uses recognized local stores without generic pricing or cache scans.
         if provider == .antigravity {
@@ -461,12 +460,18 @@ public struct CostUsageFetcher: Sendable {
             if let remoteError {
                 throw remoteError
             }
-            return Self.tokenSnapshot(
-                from: CostUsageDailyReport(data: [], summary: nil),
+            return Self.unavailableLocalSnapshot(
                 now: now,
                 historyDays: clampedHistoryDays,
-                calendar: fallbackCalendar,
-                historyCoverageIsEstablished: false)
+                calendar: fallbackCalendar)
+        }
+        // Provider-specific by design: Muse local history has token evidence but no established dollar rates.
+        if provider == .muse {
+            return try await Self.loadMuseLocalSnapshot(
+                environment: environment,
+                now: now,
+                historyDays: clampedHistoryDays,
+                options: fallbackOptions)
         }
         if let remoteError {
             throw remoteError
@@ -576,6 +581,19 @@ public struct CostUsageFetcher: Sendable {
         let piOptions: PiSessionCostScanner.Options
     }
 
+    private static func unavailableLocalSnapshot(
+        now: Date,
+        historyDays: Int,
+        calendar: Calendar) -> CostUsageTokenSnapshot
+    {
+        self.tokenSnapshot(
+            from: CostUsageDailyReport(data: [], summary: nil),
+            now: now,
+            historyDays: historyDays,
+            calendar: calendar,
+            historyCoverageIsEstablished: false)
+    }
+
     private static func loadLocalTokenScanResult(
         provider: UsageProvider,
         since: Date,
@@ -617,15 +635,22 @@ public struct CostUsageFetcher: Sendable {
             var projects: [CostUsageProjectBreakdown] = []
             var sessions: [CostUsageSessionBreakdown] = []
             var staleSnapshotUpdatedAt: Date?
+            var historyCoverageIsEstablished = provider != .codex
             if provider == .codex {
                 let roots = CostUsageScanner.codexSessionsRoots(options: options.scanOptions)
                 let rootsFingerprint = CostUsageScanner.codexRootsFingerprint(options: options.scanOptions)
                 let range = CostUsageScanner.CostUsageDayRange(
                     since: since, until: now, calendar: options.scanOptions.calendar)
                 let view = Self.codexReportView(options: options.scanOptions, range: range)
-                if let previous = view.previousReport(range: range, rootsFingerprint: rootsFingerprint) {
+                historyCoverageIsEstablished = view.historyCoverageIsEstablished(
+                    range: range,
+                    rootsFingerprint: rootsFingerprint)
+                if !historyCoverageIsEstablished,
+                   let previous = view.previousReport(range: range, rootsFingerprint: rootsFingerprint)
+                {
                     staleSnapshotUpdatedAt = previous.updatedAt
                 } else {
+                    daily = view.dailyReport(range: range, cacheRoot: options.scanOptions.cacheRoot)
                     projects = view.projects(
                         range: range,
                         cacheRoot: options.scanOptions.cacheRoot)
@@ -650,7 +675,9 @@ public struct CostUsageFetcher: Sendable {
                     projects.append(project)
                     sessions = []
                 }
-                daily = CostUsageDailyReport.merged([daily, piReport])
+                daily = CostUsageDailyReport.merged(
+                    [daily, piReport],
+                    calendar: options.scanOptions.calendar)
             }
             if provider == .codex {
                 projects = Self.mergedProjectBreakdowns(projects)
@@ -660,8 +687,7 @@ public struct CostUsageFetcher: Sendable {
                 projects: projects,
                 sessions: sessions,
                 staleSnapshotUpdatedAt: staleSnapshotUpdatedAt,
-                historyCoverageIsEstablished: provider != .codex
-                    || Self.codexScanCatchUpStatus(options: options.scanOptions).historyCoverageIsEstablished)
+                historyCoverageIsEstablished: historyCoverageIsEstablished)
         }
     }
 
@@ -674,6 +700,9 @@ public struct CostUsageFetcher: Sendable {
         // Keep a fallback detail read on the same validated connection.
         let store = CostUsageStore(cacheRoot: options.cacheRoot)
         var view = store.syncLoadCodexReadView(calendar: options.calendar, purpose: .status).scoped(to: roots)
+        if view.hasPendingScan {
+            view = store.syncLoadCodexReadView(calendar: options.calendar, purpose: .activity).scoped(to: roots)
+        }
         if view.previousReport(range: range, rootsFingerprint: rootsFingerprint) == nil {
             view = store.syncLoadCodexReadView(calendar: options.calendar, purpose: .report).scoped(to: roots)
         }
@@ -705,11 +734,6 @@ public struct CostUsageFetcher: Sendable {
         } else {
             await ModelsDevPricingPipeline.refreshIfNeeded(now: now, cacheRoot: cacheRoot, client: client)
         }
-    }
-
-    private struct ModelsDevPricingTarget: Hashable, Sendable {
-        let providerID: String
-        let modelID: String
     }
 
     private struct UnknownPricingRefreshRequest: Sendable {
@@ -925,9 +949,10 @@ public struct CostUsageFetcher: Sendable {
             // Final catch-up publication must not fall back to the report from before a new pending scan.
             guard !requireCompleteHistory || nativeHistoryCoverageIsEstablished else { return nil }
 
-            if let previous = cache.previousReport(
-                range: range,
-                rootsFingerprint: rootsFingerprint)
+            if !nativeHistoryCoverageIsEstablished,
+               let previous = cache.previousReport(
+                   range: range,
+                   rootsFingerprint: rootsFingerprint)
             {
                 reports.append(previous.report)
                 staleSnapshotUpdatedAt = previous.updatedAt
@@ -1012,7 +1037,7 @@ public struct CostUsageFetcher: Sendable {
             // rescan on the strength of another source's scan.
             return CachedCodexTokenSnapshotResult(
                 snapshot: Self.tokenSnapshot(
-                    from: CostUsageDailyReport.merged(reports),
+                    from: CostUsageDailyReport.merged(reports, calendar: options.calendar),
                     now: now,
                     historyDays: clampedHistoryDays,
                     calendar: options.calendar,
@@ -1268,6 +1293,7 @@ public struct CostUsageFetcher: Sendable {
         useCurrentLocalDayForSession: Bool = true,
         calendar: Calendar = .current,
         historyCoverageIsEstablished: Bool = true,
+        monetaryValuesAreAvailable: Bool = true,
         meteredCostUSD: Double? = nil,
         costProvenance: CostProvenance = .unknown,
         credentialScopeFingerprint: String? = nil,
@@ -1283,16 +1309,18 @@ public struct CostUsageFetcher: Sendable {
         let establishedEmptyHistory = historyCoverageIsEstablished && daily.data.isEmpty
         let sessionTokens: Int? = if let sessionEntry {
             sessionEntry.totalTokens
-        } else if hasHistoricalRows {
+        } else if hasHistoricalRows, historyCoverageIsEstablished {
             0
         } else if establishedEmptyHistory {
             0
         } else {
             nil
         }
-        let sessionCostUSD: Double? = if let sessionEntry {
+        let sessionCostUSD: Double? = if !monetaryValuesAreAvailable {
+            nil
+        } else if let sessionEntry {
             sessionEntry.costUSD
-        } else if hasHistoricalRows {
+        } else if hasHistoricalRows, historyCoverageIsEstablished {
             0
         } else if establishedEmptyHistory {
             0
@@ -1305,10 +1333,10 @@ public struct CostUsageFetcher: Sendable {
         let totalFromSummary = daily.summary?.totalCostUSD
         let totalFromEntries = daily.data.compactMap(\.costUSD).reduce(0, +)
         let allEntriesCarryCost = !daily.data.isEmpty && daily.data.allSatisfy { $0.costUSD != nil }
-        let last30DaysCostUSD = totalFromSummary
+        let last30DaysCostUSD = monetaryValuesAreAvailable ? totalFromSummary
             ?? (allEntriesCarryCost
                 ? totalFromEntries
-                : establishedEmptyHistory ? 0 : nil)
+                : establishedEmptyHistory ? 0 : nil) : nil
         let totalTokensFromSummary = daily.summary?.totalTokens
         let totalTokensFromEntries: Int? = {
             var sum = 0
@@ -1335,12 +1363,14 @@ public struct CostUsageFetcher: Sendable {
             historyDays: historyDays,
             historyCoverageIsEstablished: historyCoverageIsEstablished,
             historyLabel: historyLabel,
-            meteredCostUSD: meteredCostUSD,
+            meteredCostUSD: monetaryValuesAreAvailable ? meteredCostUSD : nil,
             costProvenance: costProvenance,
             credentialScopeFingerprint: credentialScopeFingerprint,
             daily: daily.data,
             projects: projects,
             sessions: sessions,
+            hourly: daily.hourly,
+            quotaSlices: daily.quotaSlices,
             updatedAt: updatedAt ?? now)
     }
 
